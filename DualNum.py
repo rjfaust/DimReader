@@ -1,5 +1,6 @@
 from math import*
 import numpy as np
+
 class DualNum():
     def __init__(self,val,dot):
         self.val = val
@@ -59,11 +60,17 @@ class DualNum():
 
 
     def pow(self, power, modulo=None):
-        val = pow(self.val, power)
-        if self.dot==0:
-            dot=0
+
+        val = np.power(self.val, power)
+        if power<1 and self.val ==0:
+            #print("here")
+            dot = 0
         else:
-            dot = power * pow(self.val, power - 1) * self.dot
+            dot = power * np.power(self.val, power - 1) * self.dot
+        # if self.dot==0:
+        #     dot=0
+        # else:
+        #     dot = power * pow(self.val, power - 1) * self.dot
         return DualNum(val, dot)
 
     def __radd__(self, other):

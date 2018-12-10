@@ -2,34 +2,48 @@ from Projection import*
 
 import numpy as np
 
+paramOpts = ["Perplexity","Max_Iterations","Number_of_Dimensions"]
+
 class tSNE(Projection):
 
     def __init__(self, points, parameters):
         self.origPoints = points
-        self.paramOpts = ["perplexity","maxIter","no_dims","initY","initBeta", "betaTries","initIY"]
-        self.params = {"perplexity ":30.0,
-        "maxIter": 1000,
-        "no_dims":2,
-        "initY":None,
+
+        self.params = {"Perplexity":30.0,
+        "Max_Iterations": 1000,
+        "Number_of_Dimensions":2
+        }
+        self.paramTypes = [float,int,int]
+        self.internalParamOpts= ["initY","initBeta", "betaTries","initIY"]
+        self.internalParams = {"initY":None,
         "initBeta":None,
         "betaTries":50,
         "initIY":None}
 
-        for i in range(len(parameters)):
-            self.params[self.paramOpts[i]] = parameters[i]
+        errorInd = -1
+        try:
+        # print(self.params)
+            for i in range(len(parameters)):
+                errorInd = i
+                self.params[paramOpts[i]] = self.paramTypes[i](parameters[i])
+        except:
+            print(self.params[errorInd] ," is an invalid type for parameter ", paramOpts[errorInd], ". Expected type: ", str(self.paramTypes[errorInd].__name__))
+            exit(1)
+        # print(self.params)
 
 
 
     def run(self):
+
         self.dNum = False
         if type(self.origPoints) is DualNum:
             self.dNum = True
         if self.dNum:
-            return self.dNumtsne(self.origPoints, self.params["perplexity"],self.params["maxIter"], self.params["no_dims"], self.params["initY"],
-            self.params["initBeta"], self.params["betaTries"], self.params["initIY"])
+            return self.dNumtsne(self.origPoints, self.params["Perplexity"],self.params["Max_Iterations"], self.params["Number_of_Dimensions"], self.internalParams["initY"],
+            self.internalParams["initBeta"], self.internalParams["betaTries"], self.internalParams["initIY"])
         else:
-            return self.tsne(self.origPoints, self.params["perplexity"],self.params["maxIter"], self.params["no_dims"], self.params["initY"],
-            self.params["initBeta"], self.params["betaTries"], self.params["initIY"])
+            return self.tsne(self.origPoints, self.params["Perplexity"],self.params["Max_Iterations"], self.params["Number_of_Dimensions"], self.internalParams["initY"],
+            self.internalParams["initBeta"], self.internalParams["betaTries"], self.internalParams["initIY"])
 
 
 
@@ -100,7 +114,7 @@ class tSNE(Projection):
                 # Compute current value of cost function
                 if (iter + 1) % 10 == 0:
                     C = np.sum(P * np.log(P / Q));
-                    print("Iteration ", (iter + 1), ": error is ", C)
+                    # print("Iteration ", (iter + 1), ": error is ", C)
 
                 # Stop lying about P-values
                 if iter == 100:
@@ -140,14 +154,14 @@ class tSNE(Projection):
         dY = []
         iY = []
         gains=[]
-        Y = DualNum.DualNum(np.random.randn(n,no_dims),np.zeros((n,no_dims)))
+        Y = DualNum(np.random.randn(n,no_dims),np.zeros((n,no_dims)))
         for i in range(n):
-            dY.append(DualNum.DualNum(np.zeros(no_dims),np.zeros(no_dims)))
+            dY.append(DualNum(np.zeros(no_dims),np.zeros(no_dims)))
             gains.append([])
             iY.append([])
             for j in range(no_dims):
-                gains[i].append(DualNum.DualNum(1, 0))
-                iY[i].append(DualNum.DualNum(0, 0))
+                gains[i].append(DualNum(1, 0))
+                iY[i].append(DualNum(0, 0))
 
         dY = np.array(dY)
         gains = np.array(gains)
@@ -160,12 +174,12 @@ class tSNE(Projection):
         if initIY is not None:
             for i in range(n):
                 for j in range(no_dims):
-                    iY[i][j]  = DualNum.DualNum(initIY[i][j],0)
+                    iY[i][j]  = DualNum(initIY[i][j],0)
 
         # Compute P-values
         P = self.x2p(X, 1e-5, perplexity,initBeta,betaTries)
 
-        PT = DualNum.DualNum(P.val.T,P.dot.T)
+        PT = DualNum(P.val.T,P.dot.T)
         P = P + PT
         s = sum(sum(P))
         P = P / s
@@ -175,7 +189,6 @@ class tSNE(Projection):
 
         # Run iterations
         for iter in range(max_iter):
-
             sum_Y = np.sum(np.square(Y), 1)
             num = 1 / (1 + np.add(np.add(-2 * np.dot(Y, Y.T), sum_Y).T, sum_Y))
             num[range(n), range(n)] = 0
@@ -192,7 +205,7 @@ class tSNE(Projection):
             for i in range(iMax):
                 PQ2.append([])
                 for j in range(jMax):
-                    PQ2[i].append(DualNum.DualNum(np.array(PQ.val[i][j]),np.array(PQ.dot[i][j])))
+                    PQ2[i].append(DualNum(np.array(PQ.val[i][j]),np.array(PQ.dot[i][j])))
             PQ= PQ2
             PQ = np.array(PQ)
 
@@ -211,7 +224,7 @@ class tSNE(Projection):
             for i in range(len(dY)):
                 dYNew.append([])
                 for j in range(len(dY[i])):
-                    dYNew[i].append(DualNum.DualNum(dY[i][j].val,dY[i][j].dot))
+                    dYNew[i].append(DualNum(dY[i][j].val,dY[i][j].dot))
             dY = np.array(dYNew)
             t1 =  (gains + 0.2) * ((dY > 0) != (iY > 0))
             t2 = (gains * 0.8) * ((dY > 0) == (iY > 0))
@@ -232,6 +245,8 @@ class tSNE(Projection):
             # Stop lying about P-values
             if iter == 100:
                 P = P / 4
+
+
         self.iY = iY
         # Return solution
         return Y
@@ -242,10 +257,10 @@ class tSNE(Projection):
 
         # Compute P-row and corresponding perplexity
         if self.dNum:
-            tempD = DualNum.DualNum(D.val,D.dot)
+            tempD = DualNum(D.val,D.dot)
             n=len(tempD.val)
 
-            temp =DualNum.DualNum(-beta*np.identity(n),np.zeros((n,n)))*tempD
+            temp =DualNum(-beta*np.identity(n),np.zeros((n,n)))*tempD
             P = temp.exp()
             sumP = np.maximum(sum(P).val, 1e-12)
 
@@ -256,7 +271,7 @@ class tSNE(Projection):
         PD = D*P
 
         bPD =(beta * np.sum(PD))[0]
-        if(sumP.__class__ is DualNum.DualNum):
+        if(sumP.__class__ is DualNum):
              H = sumP.log() + bPD  / sumP
         else:
             H= np.log(sumP)+bPD/sumP
@@ -283,10 +298,12 @@ class tSNE(Projection):
         """Performs a binary search to get P-values in such a way that each conditional Gaussian has the same perplexity."""
 
         # Initialize some variables
-        print( "Computing pairwise distances...")
+        # print( "Computing pairwise distances...")
         if self.dNum:
-           temp = pow(X,2)
-           tempT = DualNum.DualNum(temp.val.T,temp.dot.T)
+
+           temp = X.pow(2)
+           # temp = pow(X,2)
+           tempT = DualNum(temp.val.T,temp.dot.T)
            sum_X = sum(tempT)
 
         else:
@@ -296,7 +313,7 @@ class tSNE(Projection):
         if self.dNum:
             (n, d) = X.val.shape
 
-            XT = DualNum.DualNum(X.val.T,X.dot.T )
+            XT = DualNum(X.val.T,X.dot.T )
             xxt = X*XT
         else:
             (n, d) = X.shape
@@ -307,7 +324,7 @@ class tSNE(Projection):
         temp = np.add(-2 * xxt, sum_X)
 
         if self.dNum:
-            tempT = DualNum.DualNum(temp.val.T,temp.dot.T)
+            tempT = DualNum(temp.val.T,temp.dot.T)
         else:
             tempT = temp.T
         D = np.add(tempT, sum_X)
@@ -316,7 +333,7 @@ class tSNE(Projection):
 
         P = []
         if self.dNum:
-            P = DualNum.DualNum(np.zeros((n,n)),np.zeros((n,n)))
+            P = DualNum(np.zeros((n,n)),np.zeros((n,n)))
         else:
             P = np.zeros((n, n))
 
@@ -324,7 +341,7 @@ class tSNE(Projection):
             beta = np.ones((n, 1))
         else:
             beta = initBeta
-        if perplexity.__class__ is DualNum.DualNum:
+        if perplexity.__class__ is DualNum:
             logU = perplexity.log()
         else:
             logU = np.log(perplexity)
@@ -332,14 +349,14 @@ class tSNE(Projection):
         # Loop over all datapoints
         for i in range(n):
             # print(progress
-            if i % 500 == 0:
-                print( "Computing P-values for point ", i, " of ", n, "...")
+            # if i % 500 == 0:
+                # print( "Computing P-values for point ", i, " of ", n, "...")
 
             # Compute the Gaussian kernel and entropy for the current precision
             betamin = -np.inf
             betamax =  np.inf
             if self.dNum:
-                Di = DualNum.DualNum(D.val[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))],D.dot[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))])
+                Di = DualNum(D.val[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))],D.dot[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))])
             else:
                 Di = D[i, np.concatenate((np.r_[0:i], np.r_[i+1:n]))]
             (H, thisP) = self.Hbeta(Di, beta[i])
@@ -383,14 +400,25 @@ class tSNE(Projection):
 
         self.beta = beta
         # Return final P-matrix
-        print( "Mean value of sigma: ", np.mean(np.sqrt(1 / beta)))
+        # print( "Mean value of sigma: ", np.mean(np.sqrt(1 / beta)))
         return P
 
     def getExecParams(self):
         params = [self.Y,self.beta,self.iY]
+
         return params
 
     def setExecParams(self,params):
-        self.initY = params[0]
-        self.initBeta = params[1]
-        self.initIY = params[2]
+        initY = params[0]
+        initBeta = params[1]
+        initIY = params[2]
+
+        self.internalParams["initY"] = initY
+        self.internalParams["initBeta"] = initBeta
+        self.internalParams["initIY"] = initIY
+        self.params["Max_Iterations"]=1
+
+
+# if __name__=="__main__":
+#
+#

@@ -1,4 +1,5 @@
 from DualNum import*
+paramOpts = []
 class Projection:
     def __init__(self, points, parameters):
         self.origPoints = points

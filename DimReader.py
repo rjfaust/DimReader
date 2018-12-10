@@ -3,25 +3,26 @@ import DualNum
 import csv
 import numpy as np
 import tSNE
+import TangentMapProjection
 import multiprocessing
 import datetime
 import time
 import Grid
+import json
 
-class Projection:
+class ProjectionRunner:
     def __init__(self,projection,params=None):
         self.params = params
         self.projection = projection
         self.firstRun = False
+
+    def calculateValues(self, points, perturbations=None):
+
+
+        self.points = points
+        self.origPoints = points
         self.resultVect = [0] * (len(self.points) * 2)
 
-    def calculateValues(self, points=None, perturbations=None):
-
-        if points is None:
-            points = self.origPoints
-        else:
-            self.points = points
-            self.origPoints = points
         n = len(points)
         self.dualNumPts = DualNum.DualNum(np.array(points), np.zeros(np.shape(points)))
 
@@ -40,7 +41,7 @@ class Projection:
             xOutArray = multiprocessing.Array('d', range(n))
             yOutArray = multiprocessing.Array('d', range(n))
             outDotArray = multiprocessing.Array('d', range(2 * n))
-
+            # cpus=1
             if (cpus > n):
                 cpus = 1
             chunksize = int(np.floor(float(n) / cpus))
@@ -80,7 +81,7 @@ class Projection:
             else:
                 pts.dot[i] = self.perturb[i]
             m = len(self.origPoints[0])
-            p = projection(self.dualNumPts,self.params)
+            p = self.projection(self.dualNumPts,self.params)
             p.setExecParams(runParams)
 
 
@@ -101,7 +102,8 @@ class Projection:
 
 
 projections = ["tsne", "Tangent-Map"]
-projectionClasses=[tSNE.tSNE]
+projectionClasses=[tSNE.tSNE,TangentMapProjection.TangentMapProjection]
+projectionParamOpts = [tSNE.paramOpts,TangentMapProjection.paramOpts]
 
 
 def readFile(filename):
@@ -134,7 +136,12 @@ def readFile(filename):
         points.append(rowDat)
     return points
 
+def readTangentMap(filename):
+    f = open(filename,"r")
+    tMap = json.loads(f.read())
+    f.close()
 
+    return tMap
 
 def generateGrid(points):
     gridSize = 10
@@ -212,54 +219,84 @@ def calcGrid(points,dVects):#date, grid, gridCoord, ind):
 
     # gridF.close()
 
-def runProjection(projection, points, perturbations):
-    # derivVects = []
-    # for pert in perturbations:
-    #     projection.calculateValues(np.array(points), np.array(pert))
-    #     derivVects.append(projection.resultVect)
-    #     projPts = projection.points
+def runProjection(projection, points, perturbations, parameters,filePrefix):
 
-    date = str(datetime.datetime.fromtimestamp(time.time())).replace(" ", "_")
-    date = date.split(".")[0]
-    fileName = date + "_output.csv"
 
-    f = open(fileName, "w")
+
+    pr = ProjectionRunner(projection,parameters)
 
     n = len(points)
 
+
     pts = []
-    for i in range(perturbations):
+    print("Running DimReader")
+    for i in range(len(perturbations)):
         pert = perturbations[i]
-        projection.calculateValues(np.array(points), np.array(pert))
+        pr.calculateValues(np.array(points), np.array(pert))
 
         # derivVects.append(projection.resultVect)
-        derivVect = projection.resultVect
-        projPts = projection.points
+        derivVect = pr.resultVect
+        projPts = pr.points
         data = []
         for j in range(n):
-            data.append({"Domain":points[j].tolist(),
-                         "Range": projPts[i].tolist(),
-                         "OutputPert":derivVect[i].tolistt()
-                        }
-                        )
+            data.append({"domain":points[j],
+                         "range": projPts[j],
+                         "inputPert": pert[j],
+                         "outputPert":derivVect[j]
+                        })
+        if len(perturbations)>1:
+            fileName = filePrefix +"_"+str(i)+".dimreader"
+        else:
+            fileName = filePrefix + ".dimreader"
 
-    headers = "ProjectedX,ProjectedY"
-    if (len(perturbations) > 1):
-        for i in range(len(perturbations)):
-            headers += ",dx" + str(i) + ",dy" + str(i)
-        headers += "\n"
-    else:
-        headers += ",dx,dy\n"
-    f.write(headers)
+        output  ={"points":data}
+        grid = calcGrid(points,derivVect)
+        output.update({"grid":grid})
+        f = open(fileName, "w")
+        f.write(json.dumps(output))
+        f.close()
+
+def tmProject(tMap,pert):
+    n = len(pert)
+    result = []
     for i in range(n):
-        row = str(projPts[i][0]) + "," + str(projPts[i][1])
-        for j in range(len(perturbations)):
-            row += "," + str(derivVects[j][2 * i]) + "," + str(derivVects[j][2 * i + 1])
-        row += "\n"
-        f.write(row)
-    f.close()
+        proj = np.dot(tMap[i]["tangent"],pert[i])
+        result.append(proj[0])
+        result.append(proj[1])
+
+    return result
+
+def runTangentMapProjection(tMap,perts,prefix):
+
+    print("Running DimReader")
+    n= len(tMap)
+    for i in range(len(perts)):
+        pert = perts[i]
+
+        derivVect = tmProject(tMap,pert)
+
+        data = []
+        points = []
+        for j in range(n):
+            data.append({"domain":tMap[j]["domain"],
+                         "range": tMap[j]["range"],
+                         "inputPert": pert[j],
+                         "outputPert":derivVect[j]
+                        })
+            points.append(tMap[j]["domain"])
+        if len(perts)>1:
+            fileName = prefix +"_"+str(i)+".dimreader"
+        else:
+            fileName = prefix + ".dimreader"
+
+        output  ={"points":data}
 
 
+        grid = calcGrid(points,derivVect)
+        output.update({"grid":grid})
+        f = open(fileName, "w")
+        f.write(json.dumps(output))
+        f.close()
 
 if __name__ == "__main__":
     if (len(sys.argv) >= 4):
@@ -270,45 +307,79 @@ if __name__ == "__main__":
         if str.lower(projection) not in map(str.lower, projections):
             print("Invalid Projection")
             print("Projection Options:")
-            for opt in projections:
+            for i,opt in enumerate(projections):
                 print("\t" + opt)
+                print("\t\tOptional Parameters: "+str(projectionParamOpts[i]))
             exit(0)
 
         projInd = list(map(str.lower, projections)).index(str.lower(projection))
-        if (projInd < 5):
+        # if (projInd < 5):
+        #     inputPts = readFile(inputFile)
+        # else:
+        #     projection = projectionClasses[projInd]()
+        #     projection.loadMat(inputFile)
+        #     inputPts = projection.origPoints
+
+        date = str(datetime.datetime.fromtimestamp(time.time())).replace(" ", "_")
+        date = date.split(".")[0]
+
+        prefix = inputFile[:inputFile.rfind(".")] + "_" + projections[projInd] + "_" + date
+
+        if str.lower(projection) != "tangent-map":
             inputPts = readFile(inputFile)
-        else:
-            projection = projectionClasses[projInd]()
-            projection.loadMat(inputFile)
-            inputPts = projection.origPoints
 
-        if str.lower(perturbFile) == "all":
-            perturbVects = []
-            n, m = np.shape(inputPts)
-            for i in range(m):
-                currPert = np.zeros((n, m))
-                for j in range(n):
-                    currPert[j][i] = 1
-                perturbVects.append(currPert)
-        else:
-            perturbVects = [readFile(perturbFile)]
-
-        points = DualNum.DualNum(inputPts, perturbVects)
-
-        if (projInd < 5):
-            if (len(sys.argv) == 5):
-                projection = projectionClasses[projInd](float(sys.argv[4]))
+            if str.lower(perturbFile) == "all":
+                perturbVects = []
+                n, m = np.shape(inputPts)
+                for i in range(m):
+                    currPert = np.zeros((n, m))
+                    for j in range(n):
+                        currPert[j][i] = 1
+                    perturbVects.append(currPert.tolist())
             else:
-                projection = projectionClasses[projInd]()
+                perturbVects = [readFile(perturbFile)]
 
-        runProjection(projection, inputPts, perturbVects)
+            # points = DualNum.DualNum(inputPts, perturbVects)
+
+            # if (projInd < 5):
+            if (len(sys.argv)>4):
+                params = []
+                for i in range(4, len(sys.argv)):
+                    params = [sys.argv[i]]
+            else:
+                params = []
+                # projection = projectionClasses[projInd](inputPts,[])
+
+
+            runProjection(projectionClasses[projInd], inputPts, perturbVects,params,prefix)
+            print("Output File Prefix: ",prefix)
+
+        else:
+            tMap  = readTangentMap(inputFile)
+            if str.lower(perturbFile) == "all":
+                perturbVects = []
+                n = len(tMap)
+                m  = len(tMap[0]["domain"])
+                for i in range(m):
+                    currPert = np.zeros((n, m))
+                    for j in range(n):
+                        currPert[j][i] = 1
+                    perturbVects.append(currPert.tolist())
+            else:
+                perturbVects = [readFile(perturbFile)]
+
+            runTangentMapProjection(tMap, perturbVects, prefix)
+            print("Output File Prefix: ", prefix)
+
 
     else:
-        print("DimReaderScript [input file] [perturbation file] [Projection] [optional parameter]")
-        print("For all dimension perturbations, perturbation file = all")
+        print("DimReader.py [input file] [perturbation file] [Projection] [optional parameters (in order)]")
+        print("-To perturb all dimensions, perturbation file = all")
+        print("-When using the Tangent Map as the projection, the input file = tangent map file.")
         print("Projection Options:")
-        for opt in projections:
+        for i,opt in enumerate(projections):
             print("\t" + opt)
+            print("\t\tOptional Parameters: " + str(projectionParamOpts[i]))
 
         exit(0)
 

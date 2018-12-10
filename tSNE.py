@@ -22,14 +22,14 @@ class tSNE(Projection):
 
         errorInd = -1
         try:
-        # print(self.params)
+
             for i in range(len(parameters)):
                 errorInd = i
                 self.params[paramOpts[i]] = self.paramTypes[i](parameters[i])
         except:
             print(self.params[errorInd] ," is an invalid type for parameter ", paramOpts[errorInd], ". Expected type: ", str(self.paramTypes[errorInd].__name__))
             exit(1)
-        # print(self.params)
+
 
 
 
@@ -418,7 +418,3 @@ class tSNE(Projection):
         self.internalParams["initIY"] = initIY
         self.params["Max_Iterations"]=1
 
-
-# if __name__=="__main__":
-#
-#

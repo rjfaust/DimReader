@@ -1,10 +1,7 @@
 import numpy as np
-import scipy
-import json
 import math
 import sys
 import json
-import copy
 import blockPowerIteration
 import datetime
 import time
@@ -14,8 +11,6 @@ from DimReader import runTangentMapProjection
 def load_data(filename):
     f = open(filename, "r")
     tMap = json.loads(f.read())
-    # m = pickle.load(f)
-    # d = pickle.load(f)
     return  tMap
 
 def calcSimMat(pPoints,sigma):
@@ -41,7 +36,6 @@ def calcSimMat(pPoints,sigma):
 
 def calcLs(simMat):
     ls = []
-    # ls = []
     n=len(simMat)
 
     for i in range(n):
@@ -52,34 +46,6 @@ def calcLs(simMat):
                 else:
                     ls[i].append(-simMat[i][j])
     return ls
-
-def findPert_old(tangents,ls,penalty):
-    n = len(mat[0])
-    m1=np.dot(np.transpose(mat),mat)
-    m2=np.multiply(penalty,ls)
-    result = np.dot(np.transpose(mat),mat)-np.multiply(penalty,ls)
-    vals,vecs = scipy.linalg.eigh(m1)
-    # print("BTB: ",vals)
-    vals,vecs = scipy.linalg.eigh(ls)
-    # print("LS: ",vals)
-    posCorrection = max(vals)*penalty*np.eye(len(ls))
-
-
-    vals, vecs = scipy.linalg.eigh(result)
-    # print(vals)
-
-    result = np.add(posCorrection,result)
-    # vals, vecs= scipy.linalg.eigh(np.dot(np.transpose(blocks),blocks))
-    # print(vals)
-    # vals,vecs = scipy.linalg.eigh(-np.multiply(penalty,ls))
-    # print(vals)
-    vals, vecs = scipy.linalg.eigh(result)
-    # print(vals)
-    # vals, vecs = scipy.linalg.eig(result)
-    # v1=np.dot(m1,vecs[:,-1])
-    # v2=np.dot(m2,vecs[:,-1])
-
-    return vals,vecs
 
 def findPert(tangents,ls,penalty,which,d):
     simPen = np.multiply(penalty,ls)
@@ -96,8 +62,7 @@ def findPert(tangents,ls,penalty,which,d):
         procs = []
         cpus = multiprocessing.cpu_count()
         resultV = multiprocessing.Array('d', range(n * d))
-        # for i in range(n * d):
-        #     resultV[i] = 0
+
         chunksize = int(np.floor(n / cpus))
         for i in range(cpus):
             minI = chunksize * i
@@ -124,7 +89,7 @@ def findPert(tangents,ls,penalty,which,d):
     print("finding largest eig of ls")
     eigVects, eigVals = powerIter.calculateEig()
     correction = penalty*eigVals[0]
-    # correction = 0
+
 
     def matDot(v):
         procs = []
@@ -164,11 +129,9 @@ def findPert(tangents,ls,penalty,which,d):
 def lsDotFunc(n,d,ls,v,minI, maxI,resultV):
     ident = np.eye(d)
     identRow = np.tile(ident,(1, n))
-    # identRow = np.zeros((d,n*d))
-    # for i in range(n):
-    #     identRow[:,i*d:(i+1)*d] = np.eye(d)
+
     for i in range(minI, maxI):
-        # print("MIN: ", minI, ", ", i , " Max:", maxI)
+
         row = np.repeat(ls[i],d)
         v2 = np.multiply(row,v)
         resultV[i * d:(i + 1) * d] = np.dot(identRow,v2)
@@ -176,9 +139,7 @@ def lsDotFunc(n,d,ls,v,minI, maxI,resultV):
 def matDotFunc(n,d,bTb, simPen,correction, v, minI, maxI, resultV):
     ident = np.eye(d)
     identRow= np.tile(ident,(1,n))
-    # identRow = np.zeros((d,n*d))
-    # for i in range(n):
-    #     identRow[:,i*d:(i+1)*d] = np.eye(d)
+
     for i in range(minI, maxI):
         ident= np.eye(d)
         identRow[:,i * d:(i + 1) * d] = np.add(bTb[i], np.add(-simPen[i][i]*ident,correction*ident))
@@ -186,28 +147,9 @@ def matDotFunc(n,d,bTb, simPen,correction, v, minI, maxI, resultV):
         simRow[i]=1
         v2 = np.multiply(np.repeat(simRow,d),v)
         temp = np.dot(identRow,v2)
-        # temp[:,i * d:(i + 1) * d] = np.add(temp[:,i * d:(i + 1) * d],correction*np.eye(d))
+
         resultV[i * d:(i + 1) * d] =temp
         identRow[:,i * d:(i + 1) * d] = ident
-
-        # for j in range(n):
-        #     if i == j:
-        #         chunk = np.subtract(bTb[i], simPen[i][j] * np.eye(d))
-        #         chunk = np.add(chunk,correction*np.eye(d))
-        #         vSect = v[j * d:(j + 1) * d]
-        #         sect = np.dot(chunk, vSect)
-        #         resultV[i * d:(i + 1) * d] = np.add(resultV[i * d:(i + 1) * d], sect)
-        #     else:
-        #         chunk = (-1 * simPen[i][j]) * np.eye(d)
-        #         vSect = v[j * d:(j + 1) * d]
-        #         sect = np.dot(chunk, vSect)
-        #         resultV[i * d:(i + 1) * d] = np.add(resultV[i * d:(i + 1) * d], sect)
-
-
-
-
-def extract_block_submatrix(m, n, d, k):
-    return scipy.array(list(m[k*x:k*x+k, d*x:d*x+d] for x in range(n)))
 
 
 def recover_pert(tMap,sigma,penalty, which):
@@ -223,18 +165,6 @@ def recover_pert(tMap,sigma,penalty, which):
     vals,vecs = findPert(tangents,ls,penalty,which,d)
     return vecs[which]
 
-def recoverPertFromBlocks(blocks,data,sigma,penalty,which):
-    n = len(data.points)
-    k = len(data.points[0])
-    d = len(data.origPoints[0])
-    pPoints = data.points
-    print("calc simMat")
-    simMat = calcSimMat(pPoints, sigma)
-    print("calc ls")
-    ls = calcLs(simMat, d)
-    print("finding pert")
-    vals,vecs = findPert(blocks,ls,penalty,which,d)
-    return vecs[which]
 
 def writePert(pert,sigma,penalty,inFile,which):
     inFile =inFile[:inFile.rfind(".")]
@@ -253,8 +183,6 @@ def writePert(pert,sigma,penalty,inFile,which):
 
 
 if __name__=="__main__":
-    # sys.argv=[None, "Matrices/Iris/IrisTsneMat.pkl","10","50","0"]
-    # sys.argv = [None,"IrisTsneBlocks.pkl",10,30,0]
     if(len(sys.argv)<=3):
         print("Invalid input")
         print("Expected Input: [tangent map file] [sigma (similarity parameter)] [lambda (similarity penalty)] [which vector (optional)]")

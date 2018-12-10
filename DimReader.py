@@ -3,7 +3,6 @@ import DualNum
 import csv
 import numpy as np
 import tSNE
-import TangentMapProjection
 import multiprocessing
 import datetime
 import time
@@ -41,7 +40,7 @@ class ProjectionRunner:
             xOutArray = multiprocessing.Array('d', range(n))
             yOutArray = multiprocessing.Array('d', range(n))
             outDotArray = multiprocessing.Array('d', range(2 * n))
-            # cpus=1
+
             if (cpus > n):
                 cpus = 1
             chunksize = int(np.floor(float(n) / cpus))
@@ -102,8 +101,8 @@ class ProjectionRunner:
 
 
 projections = ["tsne", "Tangent-Map"]
-projectionClasses=[tSNE.tSNE,TangentMapProjection.TangentMapProjection]
-projectionParamOpts = [tSNE.paramOpts,TangentMapProjection.paramOpts]
+projectionClasses=[tSNE.tSNE,None.TangentMapProjection]
+projectionParamOpts = [tSNE.paramOpts,[]]
 
 
 def readFile(filename):
@@ -187,17 +186,7 @@ def calcGrid(points,dVects):#date, grid, gridCoord, ind):
     n = len(gridCoord)
     m = len(gridCoord[0])
 
-    #    gridPoints = []
-    #    for i in range(n):
-    #        gridPoints.append([])
-    #        for j in range(m):
-    #            gridPoints[i].append(vVector[m * i + j])
 
-    # if ind is not None:
-    #     gridF = open(date + "_grid" + str(ind) + ".csv", "w")
-    # else:
-    #     gridF = open(date + "_grid.csv", "w")
-    # gridF.write("NW,NE,SW,SE,Row,Col\n")
     gridRows = []
     for row in range(n - 1):
         for col in range(m - 1, ):
@@ -217,7 +206,6 @@ def calcGrid(points,dVects):#date, grid, gridCoord, ind):
     return gridRows
 
 
-    # gridF.close()
 
 def runProjection(projection, points, perturbations, parameters,filePrefix):
 
@@ -234,7 +222,6 @@ def runProjection(projection, points, perturbations, parameters,filePrefix):
         pert = perturbations[i]
         pr.calculateValues(np.array(points), np.array(pert))
 
-        # derivVects.append(projection.resultVect)
         derivVect = pr.resultVect
         projPts = pr.points
         data = []
@@ -313,12 +300,7 @@ if __name__ == "__main__":
             exit(0)
 
         projInd = list(map(str.lower, projections)).index(str.lower(projection))
-        # if (projInd < 5):
-        #     inputPts = readFile(inputFile)
-        # else:
-        #     projection = projectionClasses[projInd]()
-        #     projection.loadMat(inputFile)
-        #     inputPts = projection.origPoints
+
 
         date = str(datetime.datetime.fromtimestamp(time.time())).replace(" ", "_")
         date = date.split(".")[0]
@@ -339,16 +321,13 @@ if __name__ == "__main__":
             else:
                 perturbVects = [readFile(perturbFile)]
 
-            # points = DualNum.DualNum(inputPts, perturbVects)
 
-            # if (projInd < 5):
             if (len(sys.argv)>4):
                 params = []
                 for i in range(4, len(sys.argv)):
                     params = [sys.argv[i]]
             else:
                 params = []
-                # projection = projectionClasses[projInd](inputPts,[])
 
 
             runProjection(projectionClasses[projInd], inputPts, perturbVects,params,prefix)

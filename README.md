@@ -87,10 +87,10 @@ Sigma is a similarity parameter that is used to decide how similar two projected
 
 Sigma, in the denominator of the exponent, determines how close projected points have to be to be considered similar. Further details are given in the paper.
 
-###Lambda
+### Lambda
 Lambda is a parameter to determine how much smoothing we want.  Details of how this parameter is used is given in the paper. 
 
-###Which Vector
+### Which Vector
 The perturbation discovery boils down to an eigenvalue problem where the first eiegenvector is the perturbation that changes the projection the most. However, other eigenvectors may contain interesting information so the user can specify which perturbation vector they want to see (from 0 to n-1). By default, this is 0. 
 
 

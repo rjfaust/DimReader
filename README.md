@@ -83,7 +83,7 @@ The tangent map file should be a file created by runing the Tangent Map Recovery
 ### Sigma
 Sigma is a similarity parameter that is used to decide how similar two projected points are.  The similarity equation is
 
-![] (https://github.com/rjfaust/DimReader/blob/master/images/similarity.png?raw=true)
+![Simliarity Equation](/images/similarity.png) "Similarity Equation"
 
 Sigma, in the denominator of the exponent, determines how close projected points have to be to be considered similar. Further details are given in the paper.
 

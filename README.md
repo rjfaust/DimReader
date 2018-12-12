@@ -78,7 +78,7 @@ python PertrubationDiscovery.py tangentMapFile.tmap sigma lambda [optional which
 ```
 
 ### Tangent Map File
-The tangent map file should be a file created by runing the Tangent Map Recovery (discussed above)
+The tangent map file should be a file created by running the Tangent Map Recovery (discussed above)
 
 ### Sigma
 Sigma is a similarity parameter that is used to decide how similar two projected points are.  The similarity equation is

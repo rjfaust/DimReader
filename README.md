@@ -10,7 +10,7 @@ This repository provides the source code for DimReader.  The full paper can be f
 
 DimReader offers 3 methods:
     
-    1. DimReader: The user provides a perturbation for each point and it calculates the effect of perturbingi
+    1. DimReader: The user provides a perturbation for each point and it calculates the effect of perturbing
     each point in the specified way.
 
     2. Tangent Map Recovery: The calculation of the entire tangent map for a given dataset and projection.
@@ -78,7 +78,7 @@ python PertrubationDiscovery.py tangentMapFile.tmap sigma lambda [optional which
 ```
 
 ### Tangent Map File
-The tangent map file should be a file created by runing the Tangent Map Recovery (discussed above)
+The tangent map file should be a file created by running the Tangent Map Recovery (discussed above)
 
 ### Sigma
 Sigma is a similarity parameter that is used to decide how similar two projected points are.  The similarity equation is

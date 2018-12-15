@@ -86,7 +86,7 @@ class ProjectionRunner:
 
             results = p.run()
 
-            # print("Min: ", minI, "I: ", i, "max: ", maxI)
+            print("Min: ", minI, "I: ", i, "max: ", maxI)
 
             dotArr[2 * i] = results[i][0].dot
             dotArr[2 * i + 1] = results[i][1].dot
@@ -101,7 +101,7 @@ class ProjectionRunner:
 
 
 projections = ["tsne", "Tangent-Map"]
-projectionClasses=[tSNE.tSNE,None.TangentMapProjection]
+projectionClasses=[tSNE.tSNE,None]
 projectionParamOpts = [tSNE.paramOpts,[]]
 
 
@@ -157,14 +157,14 @@ def generateGrid(points):
     if (ymin == ymax):
         ymin -= 1
         ymax += 1
-    if ymax > xmax:
-        xmax = ymax
-    else:
-        ymax = xmax
-    if ymin < xmin:
-        xmin = ymin
-    else:
-        ymin = xmin
+    # if ymax > xmax:
+    #     xmax = ymax
+    # else:
+    #     ymax = xmax
+    # if ymin < xmin:
+    #     xmin = ymin
+    # else:
+    #     ymin = xmin
     yrange = ymax - ymin
     xrange = xmax - xmin
 
@@ -179,32 +179,21 @@ def generateGrid(points):
 
 def calcGrid(points,dVects):#date, grid, gridCoord, ind):
     gridCoord = generateGrid(points)
+    print(gridCoord)
     g = Grid.Grid(points, dVects, gridCoord)
 
     grid = g.calcGridPoints()
 
     n = len(gridCoord)
     m = len(gridCoord[0])
+    gridPoints = []
+    for i in range(n):
+        gridPoints.append([])
+        for j in range(m):
+            gridPoints[i].append(grid[m * i + j])
 
 
-    gridRows = []
-    for row in range(n - 1):
-        for col in range(m - 1, ):
-            NW = grid[m * row + col]
-            NE = grid[m * row + (col + 1)]
-            SW = grid[m * (row + 1) + col]
-            SE = grid[m * (row + 1) + (col + 1)]
-            Row = (n - 2) - row
-            Col = col
-            d = {"NW":str(NW),
-                 "NE":str(NE),
-                 "SW":str(SW) ,
-                 "SE":str(SE) ,
-                 "Row":str(Row) ,
-                 "Col":str(Col)}
-            gridRows.append(d)
-    return gridRows
-
+    return grid.tolist()
 
 
 def runProjection(projection, points, perturbations, parameters,filePrefix):
@@ -223,22 +212,24 @@ def runProjection(projection, points, perturbations, parameters,filePrefix):
         pr.calculateValues(np.array(points), np.array(pert))
 
         derivVect = pr.resultVect
+        print(derivVect)
         projPts = pr.points
         data = []
         for j in range(n):
             data.append({"domain":points[j],
                          "range": projPts[j],
                          "inputPert": pert[j],
-                         "outputPert":derivVect[j]
+                         "outputPert":[derivVect[2*j],derivVect[2*j+1]]
                         })
         if len(perturbations)>1:
             fileName = filePrefix +"_"+str(i)+".dimreader"
         else:
             fileName = filePrefix + ".dimreader"
 
-        output  ={"points":data}
-        grid = calcGrid(points,derivVect)
-        output.update({"grid":grid})
+
+        grid = calcGrid(projPts,derivVect)
+        output = {"points": data,
+                  "scalarField": grid}
         f = open(fileName, "w")
         f.write(json.dumps(output))
         f.close()
@@ -268,19 +259,21 @@ def runTangentMapProjection(tMap,perts,prefix):
             data.append({"domain":tMap[j]["domain"],
                          "range": tMap[j]["range"],
                          "inputPert": pert[j],
-                         "outputPert":derivVect[j]
+                         "outputPert":[derivVect[2*j],derivVect[2*j+1]]
+
                         })
-            points.append(tMap[j]["domain"])
+            points.append(tMap[j]["range"])
         if len(perts)>1:
             fileName = prefix +"_"+str(i)+".dimreader"
         else:
             fileName = prefix + ".dimreader"
 
-        output  ={"points":data}
+
 
 
         grid = calcGrid(points,derivVect)
-        output.update({"grid":grid})
+        output = {"points": data,
+                  "scalarField":grid}
         f = open(fileName, "w")
         f.write(json.dumps(output))
         f.close()
@@ -300,7 +293,7 @@ if __name__ == "__main__":
             exit(0)
 
         projInd = list(map(str.lower, projections)).index(str.lower(projection))
-
+        print(projInd)
 
         date = str(datetime.datetime.fromtimestamp(time.time())).replace(" ", "_")
         date = date.split(".")[0]

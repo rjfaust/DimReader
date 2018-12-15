@@ -25,13 +25,33 @@ DimReader can be run with the command
 python DimReader.py dataFile.csv perturbationFile.csv projection [optional parameters]
 ```
 
+The command to run dimreader on the iris dataset is
+
+```
+python DimReader.py Examples/iris.csv Examples/irisPerturb.csv tsne 30
+```
+
+
 ### Data File
- Should be in CSV format and all data should be numeric.
+ Should be in CSV format and all data should be numeric. An example can be found at Examples/iris.csv
 
 ### Perturbation File
  A csv where each line is the perturbation for the corresponding point.  In a row (perturbation), there should be a value for each dimension of the original data.  For example, if the data point is [1,2,3,4] the corresponding row of the perturbation file might look like "1,0,0,0".
 
-If you would like run DimReader once for each dimension (perturbing the data points in that dimension), enter "all" instead of a perturbation file.
+If you would like run DimReader once for each dimension (perturbing the data points in that dimension), enter "all" instead of a perturbation file. An example is shown below.
+
+```
+python DimReader.py Examples/iris.csv all tsne 30
+```
+This will return a .dimreader file where each point takes the form
+
+{
+    "domain": original point
+    "range": projected point
+    "inputPert": The best perturbation for that point
+    "outputPert": the resulting perturbation on the output
+}
+
 
 ### Projections
 
@@ -49,7 +69,8 @@ Currently, only two types of projections are supported:
 ### Optional Parameters
 Some projections have user tunable paramters. If that is the case, those parameters must be entered in the order that they are shown in the description (it will read them in in that order).  For example, for tSNE, if we want to specify the number of iterations, we first have to enter the perplexity. 
 
-
+### Plotting
+The projection can be plotted by opening Plotting/index.html and uploading the .dimreader file into it.  The axis lines can be turned on and off, as well as the output vectors.   
 
 
 ## Running Tangent Map Recovery
@@ -59,8 +80,21 @@ The command to recover the tangent map is
 python TangentMap.py dataFile projection [optional parameters]
 ```
 
-All of these command parameters are the same as those used in the DimReader command (above). 
+The command to calculate the Tangent map of the iris dataset is
 
+```
+python TangentMap.py Examples/iris.csv tsne 30
+```
+
+All of the command parameters are the same as those used in the DimReader command (above). 
+
+The output .tmap file (as shown in Examples/iris_TangentMap_tsne.tmap) is a JSON where each point takes the form 
+
+{
+    "domain": original point
+    "range": projected point
+    "tangent": 2xm map from the tangent of the original point to the tangent of the projected point
+}
 
 ## Running Perturbation Discovery
 Perturbation Discovery finds the perturbation that changes the projection the most under the constraints:
@@ -76,6 +110,21 @@ The command to run perturbation discovery is
 ```
 python PertrubationDiscovery.py tangentMapFile.tmap sigma lambda [optional which_vector]
 ```
+
+To recover the best perturbation from the iris dataset run the command
+
+```
+python PertrubationDiscovery.py iris_TangentMap_tsne.tmap 10 30 0
+```
+
+It will return a .dimreader file where each point takes the form
+
+{
+    "domain": original point
+    "range": projected point
+    "inputPert": The best perturbation for that point
+    "outputPert": the resulting perturbation on the output
+}
 
 ### Tangent Map File
 The tangent map file should be a file created by running the Tangent Map Recovery (discussed above)

@@ -1,3 +1,4 @@
+from numpy import linalg
 import numpy as np
 
 class Grid():
@@ -15,9 +16,7 @@ class Grid():
             self.resultVect.append(0)
             for j in range(self.nrow * self.ncol):
                 c[2*len(self.points)+i].append(0)
-        # append necessary zeros to the results vector (one for each point on the grid)
-        # for i in range(self.nrow * self.ncol):
-        #     self.resultVect.append(0)
+
         # calculate the weights for the average of the neighbors for each vi
         for i in range(len(c[0])):
             cInd = 2 * len(self.points) + i
@@ -194,6 +193,10 @@ class Grid():
         c = np.array(c)
         resultVect = np.array(self.resultVect)
 
-        self.vVect = np.linalg.lstsq(c,resultVect,rcond=0.000001)
+        self.vVect = linalg.lstsq(c,resultVect,rcond=0.000001)
 
         return self.vVect[0]
+
+
+
+

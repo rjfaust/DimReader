@@ -67,10 +67,7 @@ class DualNum():
             dot = 0
         else:
             dot = power * np.power(self.val, power - 1) * self.dot
-        # if self.dot==0:
-        #     dot=0
-        # else:
-        #     dot = power * pow(self.val, power - 1) * self.dot
+
         return DualNum(val, dot)
 
     def __radd__(self, other):

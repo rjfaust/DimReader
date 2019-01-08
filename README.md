@@ -3,6 +3,8 @@
 ## Prerequisites
 ### Python 3
 DimReader was created for Python3.  It may work on Python2 but this has not been tested. 
+### Numpy
+DimReader currently uses numpy version 1.15.2 but other versions should work. 
 
 ## Overview
 
